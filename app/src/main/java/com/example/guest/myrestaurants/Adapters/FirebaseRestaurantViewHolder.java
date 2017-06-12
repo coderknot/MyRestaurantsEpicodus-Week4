@@ -26,6 +26,8 @@ public class FirebaseRestaurantViewHolder extends RecyclerView.ViewHolder implem
     private static final int MAX_WIDTH = 200;
     private static final int MAX_HEIGHT = 200;
 
+    public ImageView restaurantImageView;
+
     View mView;
     Context mContext;
 
@@ -37,7 +39,7 @@ public class FirebaseRestaurantViewHolder extends RecyclerView.ViewHolder implem
     }
 
     public void bindRestaurant(Restaurant restaurant) {
-        ImageView restaurantImageView = (ImageView) mView.findViewById(R.id.restaurantImageView);
+        restaurantImageView = (ImageView) mView.findViewById(R.id.restaurantImageView);
         TextView nameTextView = (TextView) mView.findViewById(R.id.restaurantNameTextView);
         TextView categoryTextView = (TextView) mView.findViewById(R.id.categoryTextView);
         TextView ratingTextView = (TextView) mView.findViewById(R.id.ratingTextView);
