@@ -1,16 +1,26 @@
 package com.example.guest.myrestaurants.Adapters;
 
 import android.content.Context;
+import android.content.Intent;
 import android.support.v4.view.MotionEventCompat;
 import android.view.MotionEvent;
 import android.view.View;
 
 import com.example.guest.myrestaurants.models.Restaurant;
+import com.example.guest.myrestaurants.ui.RestaurantDetailActivity;
 import com.example.guest.myrestaurants.util.ItemTouchHelperAdapter;
 import com.example.guest.myrestaurants.util.OnStartDragListener;
 import com.firebase.ui.database.FirebaseRecyclerAdapter;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.Query;
+
+import org.parceler.Parcels;
+
+import java.util.ArrayList;
+import java.util.Collections;
 
 public class FirebaseRestaurantListAdapter
         extends FirebaseRecyclerAdapter<Restaurant, FirebaseRestaurantViewHolder>
@@ -19,6 +29,8 @@ public class FirebaseRestaurantListAdapter
     private DatabaseReference mDatabaseRef;
     private OnStartDragListener mOnStartDragListener;
     private Context mContext;
+    private ChildEventListener mChildEventListener;
+    private ArrayList<Restaurant> mRestaurants = new ArrayList<>();
 
     public FirebaseRestaurantListAdapter(Class<Restaurant> modelClass,
                                          int modelLayout,
@@ -30,12 +42,41 @@ public class FirebaseRestaurantListAdapter
         mDatabaseRef = queryRef.getRef();
         mOnStartDragListener = onStartDragListener;
         mContext = context;
+
+        mChildEventListener = mDatabaseRef.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+                mRestaurants.add(dataSnapshot.getValue(Restaurant.class));
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     @Override
     protected void populateViewHolder(final FirebaseRestaurantViewHolder viewHolder, Restaurant model, int position) {
         viewHolder.bindRestaurant(model);
+
         viewHolder.restaurantImageView.setOnTouchListener(new View.OnTouchListener() {
+
             @Override
             public boolean onTouch(View view, MotionEvent motionEvent) {
                 if(MotionEventCompat.getActionMasked(motionEvent) == MotionEvent.ACTION_DOWN) {
@@ -43,16 +84,47 @@ public class FirebaseRestaurantListAdapter
                 }
                 return false;
             }
+
+        });
+
+        viewHolder.itemView.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(mContext, RestaurantDetailActivity.class);
+                intent.putExtra("position", viewHolder.getAdapterPosition());
+                intent.putExtra("restaurants", Parcels.wrap(mRestaurants));
+                mContext.startActivity(intent);
+            }
         });
     }
 
     @Override
     public boolean onItemMove(int fromPosition, int toPosition) {
+        Collections.swap(mRestaurants, fromPosition, toPosition);
+        notifyItemMoved(fromPosition, toPosition);
         return false;
     }
 
     @Override
     public void onItemDismiss(int position) {
+        mRestaurants.remove(position);
+        getRef(position).removeValue();
+    }
 
+    @Override
+    public void cleanup() {
+        super.cleanup();
+        setIndexInFirebase();
+        mDatabaseRef.removeEventListener(mChildEventListener);
+    }
+
+    private void setIndexInFirebase() {
+        for(Restaurant restaurant : mRestaurants) {
+            int index = mRestaurants.indexOf(restaurant);
+            DatabaseReference databaseReference = getRef(index);
+            restaurant.setIndex(Integer.toString(index));
+            databaseReference .setValue(restaurant);
+        }
     }
 }
